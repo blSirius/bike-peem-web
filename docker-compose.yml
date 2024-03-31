@@ -67,9 +67,9 @@ services:
     restart: always
     environment:
       MYSQL_DATABASE: 'bike_peem_greeting'
-      MYSQL_USER: 'user'
-      MYSQL_PASSWORD: 'password'
-      MYSQL_ROOT_PASSWORD: 'password'
+      MYSQL_USER: 'bike'
+      MYSQL_PASSWORD: 'bikepassword'
+      MYSQL_ROOT_PASSWORD: 'bikepassword'
     ports:
       - "2485:3306"
     volumes:
