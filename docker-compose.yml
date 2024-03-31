@@ -32,16 +32,46 @@ services:
     networks:
       - app-network
 
+  # db:
+  #   image: mysql:5.7
+  #   container_name: bike-peem-db-container
+  #   ports:
+  #     - "2485:3306"
+  #   environment:
+  #     MYSQL_DATABASE: 'bike_peem_greeting'
+  #     MYSQL_USER: 'user'
+  #     MYSQL_PASSWORD: 'password'
+  #     MYSQL_ROOT_PASSWORD: 'password'
+  #   volumes:
+  #     - db-data:/var/lib/mysql
+  #   networks:
+  #     - app-network
+
+  # phpmyadmin:
+  #   image: phpmyadmin/phpmyadmin
+  #   container_name: bike-peem-phpmyadmin-container
+  #   ports:
+  #     - "2486:80"
+  #   environment:
+  #     PMA_HOST: db
+  #     PMA_USER: user
+  #     PMA_PASSWORD: password
+  #   depends_on:
+  #     - db
+  #   networks:
+  #     - app-network
+
   db:
-    image: mysql:5.7
     container_name: bike-peem-db-container
-    ports:
-      - "2485:3306"
+    image: mysql
+    restart: always
     environment:
       MYSQL_DATABASE: 'bike_peem_greeting'
       MYSQL_USER: 'user'
       MYSQL_PASSWORD: 'password'
       MYSQL_ROOT_PASSWORD: 'password'
+    ports:
+      - "2485:3306"
     volumes:
       - db-data:/var/lib/mysql
     networks:
@@ -52,6 +82,7 @@ services:
     container_name: bike-peem-phpmyadmin-container
     ports:
       - "2486:80"
+    restart: always
     environment:
       PMA_HOST: db
       PMA_USER: user
@@ -63,7 +94,6 @@ services:
 
 volumes:
   db-data:
-
 
 networks:
   app-network:
