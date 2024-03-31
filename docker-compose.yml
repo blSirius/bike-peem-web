@@ -85,8 +85,8 @@ services:
     restart: always
     environment:
       PMA_HOST: db
-      PMA_USER: user
-      PMA_PASSWORD: password
+      # PMA_USER: user
+      # PMA_PASSWORD: password
     depends_on:
       - db
     networks:
