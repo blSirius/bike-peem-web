@@ -46,7 +46,7 @@ services:
       - app-network
 
   db:
-    image: mysql:8.0  # Updated to the latest version as of my last update
+    image: mysql:8.0 # Updated to the latest version as of my last update
     container_name: bike-peem-db-container
     ports:
       - "2485:3306"
@@ -61,7 +61,7 @@ services:
       - app-network
 
   phpmyadmin:
-    image: phpmyadmin/phpmyadmin:5.1  # Updated to a specific version for stability
+    image: phpmyadmin/phpmyadmin:5.1 # Updated to a specific version for stability
     container_name: bike-peem-phpmyadmin-container
     ports:
       - "2486:80"
@@ -75,7 +75,21 @@ services:
       - app-network
 
 volumes:
-  db-data:
+  - type: bind
+    source: ./peem-web-server/knownImgStore
+    target: /app/knownImgStore
+  - type: bind
+    source: ./peem-web-server/unknownImgStore
+    target: /app/unknownImgStore
+  - type: bind
+    source: ./peem-web-server/envImgStore
+    target: /app/envImgStore
+  - type: bind
+    source: ./peem-web-server/labels
+    target: /app/labels
+  - type: bind
+    source: ./peem-web-server/statusoff
+    target: /app/statusoff
 
 networks:
   app-network:
