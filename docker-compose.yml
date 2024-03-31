@@ -1,9 +1,10 @@
 version: '3.8'
 
 services:
-
   web-backend:
-    build: ./peem-web-server
+    build:
+      context: ./peem-web-server
+      dockerfile: Dockerfile
     image: peem-web-server-image
     container_name: peem-web-server-container
     ports:
@@ -13,16 +14,28 @@ services:
     environment:
       DATABASE_URL: "mysql://user:password@db/bike_peem_greeting"
     volumes:
-      - ./peem-web-server/knownImgStore:/app/knownImgStore
-      - ./peem-web-server/unknownImgStore:/app/unknownImgStore
-      - ./peem-web-server/envImgStore:/app/envImgStore
-      - ./peem-web-server/labels:/app/labels
-      - ./peem-web-server/statusoff:/app/statusoff
+      - type: bind
+        source: ./peem-web-server/knownImgStore
+        target: /app/knownImgStore
+      - type: bind
+        source: ./peem-web-server/unknownImgStore
+        target: /app/unknownImgStore
+      - type: bind
+        source: ./peem-web-server/envImgStore
+        target: /app/envImgStore
+      - type: bind
+        source: ./peem-web-server/labels
+        target: /app/labels
+      - type: bind
+        source: ./peem-web-server/statusoff
+        target: /app/statusoff
     networks:
       - app-network
 
   web-frontend:
-    build: ./peem-web-client
+    build:
+      context: ./peem-web-client
+      dockerfile: Dockerfile
     image: peem-web-client-image
     container_name: peem-web-client-container
     ports:
@@ -33,7 +46,7 @@ services:
       - app-network
 
   db:
-    image: mysql:5.7
+    image: mysql:8.0  # Updated to the latest version as of my last update
     container_name: bike-peem-db-container
     ports:
       - "2485:3306"
@@ -48,10 +61,10 @@ services:
       - app-network
 
   phpmyadmin:
-    image: phpmyadmin/phpmyadmin
+    image: phpmyadmin/phpmyadmin:5.1  # Updated to a specific version for stability
     container_name: bike-peem-phpmyadmin-container
     ports:
-      - "2999:80"
+      - "2486:80"
     environment:
       PMA_HOST: db
       PMA_USER: user
@@ -63,7 +76,6 @@ services:
 
 volumes:
   db-data:
-
 
 networks:
   app-network:
