@@ -44,8 +44,8 @@ services:
       MYSQL_ROOT_PASSWORD: 'password'
     volumes:
       - db-data:/var/lib/mysql
-    networks:
-      - app-network
+    # networks:
+    #   - app-network
 
   phpmyadmin:
     image: phpmyadmin/phpmyadmin
@@ -58,8 +58,8 @@ services:
       PMA_PASSWORD: password
     depends_on:
       - db
-    networks:
-      - app-network
+    # networks:
+    #   - app-network
 
 volumes:
   db-data:
