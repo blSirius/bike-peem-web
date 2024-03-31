@@ -33,34 +33,26 @@ services:
       - app-network
 
   db:
-    image: mysql:5.7
-    container_name: bike-peem-db-container
-    ports:
-      - "2485:3306"
+    container_name: bike-peem-db
+    image: mysql
+    restart: always
     environment:
-      MYSQL_DATABASE: 'bike_peem_greeting'
-      MYSQL_USER: 'user'
-      MYSQL_PASSWORD: 'password'
-      MYSQL_ROOT_PASSWORD: 'password'
-    command: --innodb-force-recovery=1
-    volumes:
-      - db-data:/var/lib/mysql
-    networks:
-      - app-network
+      MYSQL_ROOT_PASSWORD: MYSQL_ROOT_PASSWORD
+      MYSQL_DATABASE: smart_clinic
+      MYSQL_USER: MYSQL_USER
+      MYSQL_PASSWORD: MYSQL_PASSWORD
+    ports:
+      - "1111:3306"
 
   phpmyadmin:
     image: phpmyadmin/phpmyadmin
-    container_name: bike-peem-phpmyadmin-container
     ports:
-      - "2486:80"
+      - "1112:80"
+    restart: always
     environment:
       PMA_HOST: db
-      PMA_USER: user
-      PMA_PASSWORD: password
     depends_on:
       - db
-    networks:
-      - app-network
 
 volumes:
   db-data:
