@@ -18,7 +18,7 @@ export default function TestSearchPic() {
   const [namefile, setNameFile] = useState([])
   // const [noface,setNoFace] = useState(null)
   const [text, setText] = useState(true)
-  const [faceMatcherUnk,setFaceMatcherUnk] = useState(null)
+  const [faceMatcherUnk, setFaceMatcherUnk] = useState(null)
   const [newIMG, setNewIMG] = useState(null)
   useEffect(() => {
     const MODEL_URL = '/models';
@@ -33,7 +33,7 @@ export default function TestSearchPic() {
       // setLabels(labelsData.data);
       const labeledFaceDescriptors = await loadLabeledImage(labelsData.data);
       // const labelunknown = await loadLabeledUnk()
-  
+
       // const matcherunk = new faceapi.FaceMatcher(labelunknown, 0.59);
       const matcher = new faceapi.FaceMatcher(labeledFaceDescriptors, 0.59);
       // console.log(matcher)
@@ -57,33 +57,7 @@ export default function TestSearchPic() {
   const getImagePathEnv = (single_img) => {
     return import.meta.env.VITE_API + `/getENV/${single_img}`;
   };
-  const loadLabeledUnk = async () => { // ใช้ async ที่นี่เพราะคุณมี await ภายในฟังก์ชัน
-    const baseUrl = import.meta.env.VITE_API + '/api/detectedSingleFace';
-    const files = await getFilesInDirectory();
-  
-    const descriptions = [];
-    const options = new faceapi.SsdMobilenetv1Options({ minConfidence: 0.1,scoreThreshold: 0.1  })
-    for (const file of files) {
-      const img = await faceapi.fetchImage(`${baseUrl}/${file}`);
-      const singleResult = await faceapi.detectSingleFace(img,options).withFaceLandmarks().withFaceDescriptor();
-      if (singleResult) {
-        console.log('Success file is: '+file)
-        descriptions.push(singleResult.descriptor); // ใช้ singleResult.descriptor ที่นี่
-      } else {
-        console.warn(`No face detected in image ${file}`);
-      }
-    }
-    
-    // สมมติว่าคุณมี label ที่มีความหมายสำหรับการเรียกใช้นี้
-    const label = "unknown"; // หรืออาจจะได้รับมาจากอีกที่ใดที่หนึ่ง
-  
-    if (descriptions.length > 0) {
-      return new faceapi.LabeledFaceDescriptors(label, descriptions);
-    } else {
-      console.warn(`No descriptors created for label ${label}`);
-      return null;
-    }
-  };
+
   async function searchInDetectedSingleFace(detectedDescriptor) {
     // console.log('??')
     // console.log(detectedDescriptor)
@@ -91,11 +65,11 @@ export default function TestSearchPic() {
     const files = await getFilesInDirectory();
     // console.log(files)
     let matches = [];
-    const options = new faceapi.SsdMobilenetv1Options({ minConfidence: 0.1,scoreThreshold: 0.5  })
+    const options = new faceapi.SsdMobilenetv1Options({ minConfidence: 0.1, scoreThreshold: 0.5 })
     for (const file of files) {
       const img = await faceapi.fetchImage(`${baseUrl}/${file}`);
       // console.log(file)
-      const singleResult = await faceapi.detectSingleFace(img,options).withFaceLandmarks().withFaceDescriptor();
+      const singleResult = await faceapi.detectSingleFace(img, options).withFaceLandmarks().withFaceDescriptor();
       // console.log('64')
       // console.log(singleResult)
       if (singleResult) {
@@ -120,12 +94,23 @@ export default function TestSearchPic() {
         return filename;
       });
 
-   return pngFiles.length > 0 ? pngFiles : [];
+    return pngFiles.length > 0 ? pngFiles : [];
   }
 
   async function getFilesInDirectory() {
     try {
       const response = await axios.get(import.meta.env.VITE_API + '/api/detectedSingleFace/files');
+      // console.log(response.data)
+      return response.data;
+    } catch (error) {
+      console.error("Error fetching the list of files", error);
+      return [];
+    }
+  }
+
+  async function getFilePicKnown(path) {
+    try {
+      const response = await axios.get(import.meta.env.VITE_API + '/api/known');
       // console.log(response.data)
       return response.data;
     } catch (error) {
@@ -242,14 +227,14 @@ export default function TestSearchPic() {
           if (bestMatch.distance > 0.59) {
             // const imageFromDetected = faceMatcherUnk.findBestMatch(detection.descriptor);
             const imageFromDetected = await searchInDetectedSingleFace(detection.descriptor);
-             
+
             // console.log(detection.descriptor)
             if (imageFromDetected) {
               console.log('Unknown Matched Image:', imageFromDetected);
               setpicPNG(imageFromDetected)
               console.log(imageFromDetected)
               // setNameFile(previousNames => [...previousNames, imageFromDetected.toString()]);
-              saveMatchedName(imageFromDetected);
+              saveMatchedName(detection.descriptor, imageFromDetected);
             } else {
               console.log('not found')
             }
@@ -258,7 +243,8 @@ export default function TestSearchPic() {
             console.log('Known Face Matched:', bestMatch.toString());
             namefile.push(bestMatch.toString())
             // setNameFile(bestMatch)
-            saveMatchedName([bestMatch]);
+
+            saveMatchedName(detection.descriptor, [bestMatch]);
             console.log('best match : ' + bestMatch)
           }
           // console.log('NFNFNNFNF'+namefile)
@@ -278,30 +264,114 @@ export default function TestSearchPic() {
     setLoading(true);
     setText(false)
   };
-  const saveMatchedName = async (matches) => {
-    try {
-      let fetchPromises = [];
-      for (const match of matches) {
-        // console.log('Match is'+match)
-        // setCopyname(prevData => [...prevData, ...match]);
-        const name = match.toString().split(' ')[0];
-        fetchPromises.push(axios.get(import.meta.env.VITE_API + `/getEmpDetect/${name}`));
-      }
 
-      const results = await Promise.all(fetchPromises);
-      const newCombinedData = results.reduce((acc, res) => {
-        if (Array.isArray(res.data) && res.data.length > 0) {
-          setDataDummy(prevData => [...prevData, ...res.data])
-          // console.log(res)
-          return acc.concat(res.data);
+  let fetchPromises = [];
+  async function fetchAndProcessImage(baseUrl, imagePath, detectedDescriptor) {
+    const img = await faceapi.fetchImage(`${baseUrl}/${imagePath}`);
+    const options = new faceapi.SsdMobilenetv1Options({ minConfidence: 0.1, scoreThreshold: 0.1 });
+    const singleResult = await faceapi.detectSingleFace(img, options).withFaceLandmarks().withFaceDescriptor();
+  
+    if (singleResult) {
+      const distance = faceapi.euclideanDistance(detectedDescriptor, singleResult.descriptor);
+      if (distance < 0.59) {
+        console.log('Match found:', imagePath);
+        return imagePath; // Return the path if it's a match.
+      }
+    }
+  }
+  
+  const saveMatchedName = async (detectedDescriptor, matches) => {
+    const baseUrl = import.meta.env.VITE_API + '/api/detectknown';
+    let newCombinedData = [];
+  
+    try {
+      for (const match of matches) {
+        const name = match.toString().split(' ')[0];
+  
+        if (name.includes('.jpg')) {
+          newCombinedData.push(await axios.get(`${import.meta.env.VITE_API}/getEmpDetect/${name}`));
+        } else {
+          const { data } = await axios.get(`${import.meta.env.VITE_API}/getEmpDetect/${name}`);
+          
+          for (const item of data) {
+            const matchedPath = await fetchAndProcessImage(baseUrl, item.path, detectedDescriptor);
+            
+            if (matchedPath) {
+              const result = await axios.get(`${import.meta.env.VITE_API}/getEmpDetect/${matchedPath}`);
+              newCombinedData.push(result);
+            }
+          }
         }
-        return acc;
-      }, []);
-      setData(prevData => [...prevData, ...newCombinedData]);
+      }
+  
+      // Process newCombinedData to update state or perform further actions
+      const combinedData = newCombinedData.map(res => res.data).flat();
+      setData(prevData => [...prevData, ...combinedData]);
+  
     } catch (err) {
       console.error('Error fetching data:', err);
     }
   };
+
+
+  // const saveMatchedName = async (detectedDescriptor, matches) => {
+
+  //   // console.log(detectedDescriptor)
+  //   try {
+
+  //     for (const match of matches) {
+  //       // console.log('Match is'+match)
+  //       // setCopyname(prevData => [...prevData, ...match]);
+  //       const name = match.toString().split(' ')[0];
+  //       if (name.includes('.jpg')) {
+  //         fetchPromises.push(axios.get(import.meta.env.VITE_API + `/getEmpDetect/${name}`));
+  //       } else {
+  //         const result = await axios.get(import.meta.env.VITE_API + `/getEmpDetect/${name}`)
+         
+  //         result.data.forEach(async (item) => {
+  //           console.log(item.path);
+  //           //give api to get folder from server.js by item.path in
+  //           const baseUrl = import.meta.env.VITE_API + '/api/detectknown';
+  //           const img = await faceapi.fetchImage(`${baseUrl}/${item.path}`);
+  //           // const getImg = getFilePicKnown(item.path)
+  //           const options = new faceapi.SsdMobilenetv1Options({ minConfidence: 0.1, scoreThreshold: 0.1 })
+  //           const singleResult = await faceapi.detectSingleFace(img, options).withFaceLandmarks().withFaceDescriptor();
+  //           if (singleResult) {
+  //             // console.log('singleTEST')
+  //             const distance = faceapi.euclideanDistance(detectedDescriptor, singleResult.descriptor);
+  //             // console.log('distance')
+  //             // console.log(distance)
+  //             if (distance < 0.59) {
+  //               console.log('MUST BE !')
+  //               console.log(item)
+  //               fetchPromises.push(axios.get(import.meta.env.VITE_API + `/getEmpDetect/${item.path}`));
+  //               console.log(fetchPromises)
+  //             }
+
+  //           }
+  //         });
+  //       }
+
+  //       // console.log(result.data.)
+  //       // fetchPromises.push(axios.get(import.meta.env.VITE_API + `/getEmpDetect/${name}`));
+  //     }
+  //     console.log(fetchPromises)
+
+  //     const results = await Promise.all(fetchPromises);
+  //     const newCombinedData = results.reduce((acc, res) => {
+  //       if (Array.isArray(res.data) && res.data.length > 0) {
+  //         setDataDummy(prevData => [...prevData, ...res.data])
+  //         // console.log(res)
+  //         return acc.concat(res.data);
+  //       }
+  //       return acc;
+  //     }, []);
+  //     setData(prevData => [...prevData, ...newCombinedData]);
+  //   } catch (err) {
+  //     console.error('Error fetching data:', err);
+  //   }
+  // };
+
   const testdelete = () => {
     setNameFile([])
     setDataDummy([])
@@ -383,13 +453,13 @@ export default function TestSearchPic() {
                     ))}
                   </tbody>
 
-                  ) : (
-                   <tbody>
-                   <tr>
+                ) : (
+                  <tbody>
+                    <tr>
                       <td colSpan="7">ไม่พบข้อมูล</td>
                     </tr>
-                   </tbody>
-                 )} 
+                  </tbody>
+                )}
               </Table>
               <div className="pagination-container">
                 <Pagination>
