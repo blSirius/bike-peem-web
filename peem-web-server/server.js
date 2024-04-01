@@ -614,6 +614,17 @@ app.get('/api/detectedSingleFace/files', async (req, res) => {
   }
 });
 
+app.get('/api/detectedSingleFaceKnown/files', async (req, res) => {
+  const directoryPath = path.join(process.cwd(), 'knownImgStore');
+  try {
+    const files = await fs.promises.readdir('knownImgStore');
+    res.json(files);
+  } catch (error) {
+    console.error("Error reading directory", error);
+    res.status(500).send('Internal Server Error');
+  }
+});
+
 app.get('/api/known', async (req, res) => {
   const path = req.body
   const directoryPath = path.join(process.cwd(), 'knownImgStore');

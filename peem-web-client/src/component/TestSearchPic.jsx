@@ -58,6 +58,45 @@ export default function TestSearchPic() {
     return import.meta.env.VITE_API + `/getENV/${single_img}`;
   };
 
+  async function searchInDetectedSingleFaceKnown(detectedDescriptor) {
+    // console.log('??')
+    // console.log(detectedDescriptor)
+    const baseUrl = import.meta.env.VITE_API + '/api/detectknown';
+    const files = await getFilesInDirectoryKnown();
+    // console.log(files)
+    let matches = [];
+    const options = new faceapi.SsdMobilenetv1Options({ minConfidence: 0.1, scoreThreshold: 0.5 })
+    for (const file of files) {
+      const img = await faceapi.fetchImage(`${baseUrl}/${file}`);
+      // console.log(file)
+      const singleResult = await faceapi.detectSingleFace(img, options).withFaceLandmarks().withFaceDescriptor();
+      // console.log('64')
+      // console.log(singleResult)
+      if (singleResult) {
+        const distance = faceapi.euclideanDistance(detectedDescriptor, singleResult.descriptor);
+        console.log(distance)
+        if (distance < 0.6) {
+          matches.push({ distance, file });
+        }
+      }
+    }
+
+    matches.sort((a, b) => a.distance - b.distance);
+
+    const pngFiles = matches
+      .filter(match => match.file && match.file.endsWith('.jpg'))
+      .map(match => {
+        // namefile.push(match.file)
+        setNameFile(previousNames => [...previousNames, match.file]);
+        // console.log('WHYYYYYY' + match.file)
+        // Extract just the filename from the URL path
+        const filename = match.file.split('/').pop(); // Assuming match.file is a string with the file path
+        return filename;
+      });
+
+    return pngFiles.length > 0 ? pngFiles : [];
+  }
+
   async function searchInDetectedSingleFace(detectedDescriptor) {
     // console.log('??')
     // console.log(detectedDescriptor)
@@ -100,6 +139,16 @@ export default function TestSearchPic() {
   async function getFilesInDirectory() {
     try {
       const response = await axios.get(import.meta.env.VITE_API + '/api/detectedSingleFace/files');
+      // console.log(response.data)
+      return response.data;
+    } catch (error) {
+      console.error("Error fetching the list of files", error);
+      return [];
+    }
+  }
+  async function getFilesInDirectoryKnown() {
+    try {
+      const response = await axios.get(import.meta.env.VITE_API + '/api/detectedSingleFaceKnown/files');
       // console.log(response.data)
       return response.data;
     } catch (error) {
@@ -242,10 +291,19 @@ export default function TestSearchPic() {
           } else {
             console.log('Known Face Matched:', bestMatch.toString());
             namefile.push(bestMatch.toString())
+            const imageFromDetected = await searchInDetectedSingleFaceKnown(detection.descriptor);
             // setNameFile(bestMatch)
-
-            saveMatchedName(detection.descriptor, [bestMatch]);
-            console.log('best match : ' + bestMatch)
+            if (imageFromDetected) {
+              // console.log('Unknown Matched Image:', imageFromDetected);
+              setpicPNG(imageFromDetected)
+              // console.log(imageFromDetected)
+              // setNameFile(previousNames => [...previousNames, imageFromDetected.toString()]);
+              saveMatchedName(detection.descriptor, imageFromDetected);
+            } else {
+              console.log('not found')
+            }
+            // saveMatchedName(detection.descriptor, [bestMatch]);
+            // console.log('best match : ' + bestMatch)
           }
           // console.log('NFNFNNFNF'+namefile)
           const box = detection.detection.box;
@@ -291,7 +349,7 @@ export default function TestSearchPic() {
         if (name.includes('.jpg')) {
           newCombinedData.push(await axios.get(`${import.meta.env.VITE_API}/getEmpDetect/${name}`));
         } else {
-          const { data } = await axios.get(`${import.meta.env.VITE_API}/getEmpDetect/${name}`);
+          const { data } = await axios.get(`${import.meta.env.VITE_API}/detectknown/${name}`);
           
           for (const item of data) {
             const matchedPath = await fetchAndProcessImage(baseUrl, item.path, detectedDescriptor);
